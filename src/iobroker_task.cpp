@@ -24,7 +24,7 @@ typedef struct {
     bool bTv;
 } iobrokerdata_t;
 
-iobrokerdata_t      globalIOBrokerData;
+iobrokerdata_t      globalIOBrokerData = {false, false, false};
 
 void iobroker_task(void *param) {
     xEventGroupSetBits(task_event, TASK_IOBROKER_READY);
@@ -52,7 +52,6 @@ int setIOBrokerObject(const char *objectname, const char *objectData) {
     http.begin(client, requestURL);
     int httpCode = http.GET();
     if (httpCode > 0) {
-        Serial.printf("[HTTP] SET \"%s\" code: %d\n", requestURL, httpCode);
         http.end();
         if (httpCode != HTTP_CODE_OK) {
             return httpCode;
@@ -61,7 +60,6 @@ int setIOBrokerObject(const char *objectname, const char *objectData) {
     }
     http.end();
     return httpCode;
-
 }
 
 int getIOBrokerObject(const char *objectname, char *objectData) {
@@ -72,10 +70,8 @@ int getIOBrokerObject(const char *objectname, char *objectData) {
     http.begin(client, requestURL);
     int httpCode = http.GET();
     if (httpCode > 0) {
-        Serial.printf("[HTTP] GET \"%s\" code: %d\n", requestURL, httpCode);
         if (httpCode == HTTP_CODE_OK) {
             String payload = http.getString();
-            Serial.println(payload);
             sprintf(objectData, "%s", payload.c_str());
         }
         http.end();
@@ -87,13 +83,18 @@ int getIOBrokerObject(const char *objectname, char *objectData) {
 
 void refreshDataFromIOBroker() {
     char strData[256];
-    getIOBrokerObject(IOBROKER_OBJECT_NIGHTMODE, strData);
-    getIOBrokerObject(IOBROKER_OBJECT_PRESENCE_BEDROOM, strData);
-    getIOBrokerObject(IOBROKER_OBJECT_TV_BEDROOM, strData);
+    if (lockIOBrokerData()) {
+        getIOBrokerObject(IOBROKER_OBJECT_NIGHTMODE, strData);
+        globalIOBrokerData.bNightMode = (strcmp(strData, "true") == 0);
+        getIOBrokerObject(IOBROKER_OBJECT_PRESENCE_BEDROOM, strData);
+        globalIOBrokerData.bPresence = (strcmp(strData, "true") == 0);
+        getIOBrokerObject(IOBROKER_OBJECT_TV_BEDROOM, strData);
+        globalIOBrokerData.bTv = (strcmp(strData, "true") == 0);
+    }
 }
 
 bool nightmodeActive() {
-    if (lockIOBrokerData) {
+    if (lockIOBrokerData()) {
         bool bResult = globalIOBrokerData.bNightMode;
         unlockIOBrokerData();
         return bResult;
@@ -102,7 +103,7 @@ bool nightmodeActive() {
 }
 
 bool presenceBedroomDetected() {
-    if (lockIOBrokerData) {
+    if (lockIOBrokerData()) {
         bool bResult = globalIOBrokerData.bPresence;
         unlockIOBrokerData();
         return bResult;
@@ -111,7 +112,7 @@ bool presenceBedroomDetected() {
 }
 
 bool tVBedroomSwitchedOn() {
-    if (lockIOBrokerData) {
+    if (lockIOBrokerData()) {
         bool bResult = globalIOBrokerData.bTv;
         unlockIOBrokerData();
         return bResult;
@@ -121,7 +122,7 @@ bool tVBedroomSwitchedOn() {
 
 void nightmodeActive(bool bSwitch) {
     setIOBrokerObject(IOBROKER_OBJECT_NIGHTMODE, bSwitch ? "true" : "false");
-    if (lockIOBrokerData) {
+    if (lockIOBrokerData()) {
         globalIOBrokerData.bNightMode = bSwitch;
         unlockIOBrokerData();
     }
@@ -129,7 +130,7 @@ void nightmodeActive(bool bSwitch) {
 
 void tVBedroomSwitchedOn(bool bSwitch) {
     setIOBrokerObject(IOBROKER_OBJECT_TV_BEDROOM, bSwitch ? "true" : "false");
-    if (lockIOBrokerData) {
+    if (lockIOBrokerData()) {
         globalIOBrokerData.bTv = bSwitch;
         unlockIOBrokerData();
     }
@@ -140,7 +141,7 @@ SemaphoreHandle_t               ioBrokerSemaphore = NULL;
 bool lockIOBrokerData() {
     if (ioBrokerSemaphore == NULL)
         ioBrokerSemaphore = xSemaphoreCreateMutex();
-    if (xSemaphoreTake(ioBrokerSemaphore, (TickType_t)5000) == pdTRUE) {
+    if (xSemaphoreTake(ioBrokerSemaphore, (TickType_t)30000) == pdTRUE) {
         return true;
     } else {
         Serial.printf("%s could not get semaphore!\n", __PRETTY_FUNCTION__);

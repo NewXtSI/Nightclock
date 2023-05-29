@@ -59,6 +59,11 @@ void ui_task(void *param) {
         lv_timer_handler(); /* let the GUI do its work */
         const portTickType xDelay = 10 / portTICK_RATE_MS;
         vTaskDelay(xDelay);
+        if (nightmodeActive()) {
+            lcd.setBrightness(5);
+        } else {
+            lcd.setBrightness(100);
+        }
     }
 
     vTaskDelete(NULL);
