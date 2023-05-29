@@ -2,6 +2,9 @@
 #define LGFX_USE_V1     // set to use new version of library
 
 #include <Arduino.h>
+#include <WiFi.h>
+#include <ESPAsyncWebServer.h>
+#include <AsyncElegantOTA.h>
 
 #include "config.h"
 
@@ -12,6 +15,7 @@
 #include "lv_conf.h"
 
 static LGFX lcd; // declare display variable
+AsyncWebServer server(80);
 
 /*** Setup screen resolution for LVGL ***/
 
@@ -22,12 +26,30 @@ static lv_color_t buf[screenWidth * 10];
 void display_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p);
 void touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data);
 
+#define WL_MAC_ADDR_LENGTH 6
+
 void setup()
 {
     Serial.begin(115200); /* prepare for possible serial debug */
     delay(200);
-    lcd.init(); // Initialize LovyanGFX
-    lv_init();  // Initialize lvgl
+
+    static char wifiHostname[32];
+    uint8_t mac[WL_MAC_ADDR_LENGTH];
+    WiFi.macAddress(mac);
+    snprintf(wifiHostname, sizeof(wifiHostname), "Nightclock-%02X%02X", mac[4], mac[5]);
+    WiFi.hostname(wifiHostname);
+    WiFi.mode(WIFI_STA);
+
+    WiFi.begin(WIFI_SSID, WIFI_PSK);
+    while (!WiFi.isConnected()) {
+        delay(10);
+    }
+    Serial.printf("WiFi connected: %s -> %s\n", wifiHostname, WiFi.localIP().toString().c_str());
+
+    lcd.init();  // Initialize LovyanGFX
+    lcd.setBrightness(0);
+
+    lv_init();   // Initialize lvgl
 
     // Setting display to landscape
     if (lcd.width() < lcd.height())
@@ -51,6 +73,15 @@ void setup()
     indev_drv.type = LV_INDEV_TYPE_POINTER;
     indev_drv.read_cb = touchpad_read;
     lv_indev_drv_register(&indev_drv);
+
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(200, "text/plain", "Hi!");
+    });
+
+    AsyncElegantOTA.begin(&server);    // Start ElegantOTA
+
+    server.begin();
+    Serial.println("HTTP server started");
 }
 
 void loop()
