@@ -3,11 +3,13 @@
 #include <ESPAsyncWebServer.h>
 #include <AsyncElegantOTA.h>
 
+#include <ezTime.h>
 #include "config.h"
 
 // Tasks
 void ui_task(void *param);
 
+Timezone nightclockTZ;
 AsyncWebServer server(80);
 EventGroupHandle_t      task_event;
 
@@ -22,6 +24,9 @@ void setup()
     Serial.begin(115200); /* prepare for possible serial debug */
     delay(200);
 
+    // Starting up UI task
+    xTaskCreatePinnedToCore(ui_task, "ui_task", 1024 * 6, NULL, 3, &ui_taskhandle, 1);
+
     static char wifiHostname[32];
     uint8_t mac[WL_MAC_ADDR_LENGTH];
     WiFi.macAddress(mac);
@@ -35,11 +40,15 @@ void setup()
     }
     Serial.printf("WiFi connected: %s -> %s\n", wifiHostname, WiFi.localIP().toString().c_str());
 
+    // NTP Sync
+    nightclockTZ.setLocation("de");
+    waitForSync();
+    Serial.printf("Local time: %s", nightclockTZ.dateTime().c_str());
+
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(200, "text/plain", "Hi!");
     });
 
-    xTaskCreatePinnedToCore(ui_task, "ui_task", 1024 * 6, NULL, 3, &ui_taskhandle, 1);
     AsyncElegantOTA.begin(&server);    // Start ElegantOTA
 
     xEventGroupWaitBits(
