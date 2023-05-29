@@ -11,4 +11,7 @@
 #  pragma error "Please define WIFI_PSK in userconfig.h"
 #endif
 
+static const uint16_t screenWidth = 480;
+static const uint16_t screenHeight = 320;
+
 #endif  // INCLUDE_CONFIG_H__

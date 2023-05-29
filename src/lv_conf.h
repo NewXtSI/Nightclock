@@ -13,8 +13,6 @@
 
 /* clang-format off */
 
-#ifndef A708ABCF_8915_4AD6_BE8E_C8636B44F2F9
-#define A708ABCF_8915_4AD6_BE8E_C8636B44F2F9
 #if 1 /*Set it to "1" to enable content*/
 
 #ifndef LV_CONF_H
@@ -621,6 +619,3 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 #endif /*LV_CONF_H*/
 
 #endif /*End of "Content enable"*/
-
-
-#endif /* A708ABCF_8915_4AD6_BE8E_C8636B44F2F9 */
