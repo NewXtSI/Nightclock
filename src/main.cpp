@@ -8,6 +8,7 @@
 
 // Tasks
 void ui_task(void *param);
+void iobroker_task(void *param);
 
 Timezone nightclockTZ;
 AsyncWebServer server(80);
@@ -26,6 +27,7 @@ void setup()
 
     // Starting up UI task
     xTaskCreatePinnedToCore(ui_task, "ui_task", 1024 * 6, NULL, 3, &ui_taskhandle, 1);
+    xTaskCreatePinnedToCore(iobroker_task, "iobroker_task", 1024 * 7, NULL, 1, nullptr, 0);
 
     static char wifiHostname[32];
     uint8_t mac[WL_MAC_ADDR_LENGTH];
@@ -53,7 +55,7 @@ void setup()
 
     xEventGroupWaitBits(
         task_event,
-        (TASK_UI_READY),
+        (TASK_UI_READY | TASK_IOBROKER_READY),
         pdFALSE, pdTRUE, 6500000);
 
     server.begin();

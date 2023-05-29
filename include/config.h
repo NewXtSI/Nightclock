@@ -12,8 +12,16 @@
 #endif
 
 #define TASK_UI_READY               (1 << 0)
+#define TASK_IOBROKER_READY         (1 << 1)
 
 static const uint16_t screenWidth = 480;
 static const uint16_t screenHeight = 320;
+
+bool nightmodeActive();
+bool presenceBedroomDetected();
+bool tVBedroomSwitchedOn();
+
+void nightmodeActive(bool bSwitch);
+void tVBedroomSwitchedOn(bool bSwitch);
 
 #endif  // INCLUDE_CONFIG_H__

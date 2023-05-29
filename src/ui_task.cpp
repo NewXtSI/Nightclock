@@ -96,3 +96,4 @@ void touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
         // Serial.printf("Touch (x,y): (%03d,%03d)\n",touchX,touchY );
     }
 }
+
