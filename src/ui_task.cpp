@@ -11,18 +11,32 @@
 #include <lvgl.h>
 #include "lv_conf.h"
 
+#include <ezTime.h>
+
 /*** Setup screen resolution for LVGL ***/
 
 static LGFX lcd; // declare display variable
 
 static lv_disp_draw_buf_t draw_buf;
 static lv_color_t buf[screenWidth * 10];
+
 extern EventGroupHandle_t   task_event;
+extern Timezone nightclockTZ;
 
 
 /*** Function declaration ***/
 void display_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p);
 void touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data);
+
+lv_obj_t *lvClockLabel = NULL;
+lv_obj_t *nightmodeButton = NULL;
+lv_obj_t *tvButton = NULL;
+
+void lv_clockTimer(lv_timer_t *timer) {
+    char clocktext[20];
+    sprintf(clocktext, "%02d:%02d", nightclockTZ.hour(), nightclockTZ.minute());
+    lv_label_set_text(lvClockLabel, clocktext);
+}
 
 void ui_task(void *param) {
     lcd.init();  // Initialize LovyanGFX
@@ -55,14 +69,99 @@ void ui_task(void *param) {
 
     xEventGroupSetBits(task_event, TASK_UI_READY);
 
+    lv_obj_t *mainscreen = lv_obj_create(nullptr);
+    lvClockLabel = lv_label_create(mainscreen);
+    lv_obj_set_pos(lvClockLabel, 20, 20);
+
+    nightmodeButton = lv_btn_create(mainscreen);
+    lv_obj_set_pos(nightmodeButton, screenWidth-20-64,20);
+    lv_obj_set_size(nightmodeButton, 64, 64);
+    lv_obj_add_flag(nightmodeButton, LV_OBJ_FLAG_CHECKABLE);
+    lv_obj_set_style_border_color(nightmodeButton, lv_color_hex(0xffffff), 0);
+    lv_obj_set_style_bg_color(nightmodeButton, lv_color_hex(0xffffff), 0);
+    lv_obj_set_style_border_color(nightmodeButton, lv_color_hex(0xff0000), LV_STATE_CHECKED);
+    lv_obj_set_style_bg_color(nightmodeButton, lv_color_hex(0xff0000), LV_STATE_CHECKED);
+    lv_obj_set_style_border_color(nightmodeButton, lv_color_hex(0x0000ff), LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(nightmodeButton, lv_color_hex(0x0000ff), LV_STATE_PRESSED);
+    lv_obj_add_event_cb(
+        nightmodeButton,
+        [](lv_event_t *event) {
+        bool bActive;
+
+        lv_obj_t *obj = lv_event_get_target(event);
+        if (lv_obj_get_state(obj) & LV_STATE_CHECKED) {
+            nightmodeActive(true);
+        } else {
+            nightmodeActive(false);
+        }
+      },
+      LV_EVENT_VALUE_CHANGED, nightmodeButton);
+
+    tvButton = lv_btn_create(mainscreen);
+    lv_obj_set_pos(tvButton, screenWidth-20-64, 92);
+    lv_obj_set_size(tvButton, 64, 64);
+    lv_obj_add_flag(tvButton, LV_OBJ_FLAG_CHECKABLE);
+    lv_obj_set_style_border_color(tvButton, lv_color_hex(0xffffff), 0);
+    lv_obj_set_style_bg_color(tvButton, lv_color_hex(0xffffff), 0);
+    lv_obj_set_style_border_color(tvButton, lv_color_hex(0xff0000), LV_STATE_CHECKED);
+    lv_obj_set_style_bg_color(tvButton, lv_color_hex(0xff0000), LV_STATE_CHECKED);
+    lv_obj_set_style_border_color(tvButton, lv_color_hex(0x0000ff), LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(tvButton, lv_color_hex(0x0000ff), LV_STATE_PRESSED);
+    lv_obj_add_event_cb(
+        tvButton,
+        [](lv_event_t *event) {
+        bool bActive;
+
+        lv_obj_t *obj = lv_event_get_target(event);
+        if (lv_obj_get_state(obj) & LV_STATE_CHECKED) {
+            tVBedroomSwitchedOn(true);
+        } else {
+            tVBedroomSwitchedOn(false);
+        }
+      },
+      LV_EVENT_VALUE_CHANGED, tvButton);
+
+    lv_obj_t *spraybutton = lv_btn_create(mainscreen);
+    lv_obj_set_pos(spraybutton, screenWidth-20-64, 92+72);
+    lv_obj_set_size(spraybutton, 64, 64);
+    lv_obj_set_style_border_color(spraybutton, lv_color_hex(0xffffff), 0);
+    lv_obj_set_style_bg_color(spraybutton, lv_color_hex(0xffffff), 0);
+    lv_obj_set_style_border_color(spraybutton, lv_color_hex(0x0000ff), LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(spraybutton, lv_color_hex(0x0000ff), LV_STATE_PRESSED);
+    lv_obj_add_event_cb(
+        spraybutton,
+        [](lv_event_t *event) {
+        bedroomAromaspray(3);
+      },
+      LV_EVENT_CLICKED, spraybutton);
+
+    lv_scr_load(mainscreen);
+
+    lv_timer_t *timer = lv_timer_create(lv_clockTimer, 800, NULL);
+
     while (1) {
         lv_timer_handler(); /* let the GUI do its work */
-        const portTickType xDelay = 10 / portTICK_RATE_MS;
+        const portTickType xDelay = 50 / portTICK_RATE_MS;
         vTaskDelay(xDelay);
         if (nightmodeActive()) {
+            if ((lv_obj_get_state(nightmodeButton) & LV_STATE_CHECKED) != LV_STATE_CHECKED) {
+                lv_obj_add_state(nightmodeButton, LV_STATE_CHECKED);
+            }
             lcd.setBrightness(5);
         } else {
+            if (lv_obj_get_state(nightmodeButton) & LV_STATE_CHECKED) {
+                lv_obj_clear_state(nightmodeButton, LV_STATE_CHECKED);
+            }
             lcd.setBrightness(100);
+        }
+        if (tVBedroomSwitchedOn()) {
+            if ((lv_obj_get_state(tvButton) & LV_STATE_CHECKED) != LV_STATE_CHECKED) {
+                lv_obj_add_state(tvButton, LV_STATE_CHECKED);
+            }
+        } else {
+            if (lv_obj_get_state(tvButton) & LV_STATE_CHECKED) {
+                lv_obj_clear_state(tvButton, LV_STATE_CHECKED);
+            }
         }
     }
 

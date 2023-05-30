@@ -45,7 +45,7 @@ void setup()
     // NTP Sync
     nightclockTZ.setLocation("de");
     waitForSync();
-    Serial.printf("Local time: %s", nightclockTZ.dateTime().c_str());
+    Serial.printf("Local time: %s\n", nightclockTZ.dateTime().c_str());
 
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(200, "text/plain", "Hi!");
@@ -60,9 +60,11 @@ void setup()
 
     server.begin();
     Serial.println("HTTP server started");
+    Serial.printf("OTA: http://%s/update\n", WiFi.localIP().toString().c_str());
 }
 
 void loop()
 {
+    delay(10);
 }
 

@@ -16,8 +16,6 @@ void unlockIOBrokerData();
 WiFiClientSecure client;
 HTTPClient http;
 
-bool bSprayTest = false;
-
 typedef struct {
     bool bNightMode;
     bool bPresence;
@@ -32,12 +30,8 @@ void iobroker_task(void *param) {
     client.setInsecure();
     while (1) {
         if (WiFi.isConnected()) {
-            if (!bSprayTest) {
-                setIOBrokerObject(IOBROKER_AROMA_BEDROOM, "10");
-                bSprayTest = true;
-            }
-            delay(1000);
             refreshDataFromIOBroker();
+            delay(1000);
         } else {
             delay(2000);
         }
@@ -90,6 +84,7 @@ void refreshDataFromIOBroker() {
         globalIOBrokerData.bPresence = (strcmp(strData, "true") == 0);
         getIOBrokerObject(IOBROKER_OBJECT_TV_BEDROOM, strData);
         globalIOBrokerData.bTv = (strcmp(strData, "true") == 0);
+        unlockIOBrokerData();
     }
 }
 
@@ -136,12 +131,16 @@ void tVBedroomSwitchedOn(bool bSwitch) {
     }
 }
 
+void bedroomAromaspray(int iSeconds) {
+    setIOBrokerObject(IOBROKER_AROMA_BEDROOM, String(iSeconds).c_str());
+}
+
 SemaphoreHandle_t               ioBrokerSemaphore = NULL;
 
 bool lockIOBrokerData() {
     if (ioBrokerSemaphore == NULL)
         ioBrokerSemaphore = xSemaphoreCreateMutex();
-    if (xSemaphoreTake(ioBrokerSemaphore, (TickType_t)30000) == pdTRUE) {
+    if (xSemaphoreTake(ioBrokerSemaphore, (TickType_t)10000) == pdTRUE) {
         return true;
     } else {
         Serial.printf("%s could not get semaphore!\n", __PRETTY_FUNCTION__);

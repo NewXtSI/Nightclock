@@ -23,5 +23,6 @@ bool tVBedroomSwitchedOn();
 
 void nightmodeActive(bool bSwitch);
 void tVBedroomSwitchedOn(bool bSwitch);
+void bedroomAromaspray(int iSeconds);
 
 #endif  // INCLUDE_CONFIG_H__
