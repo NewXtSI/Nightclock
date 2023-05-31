@@ -29,13 +29,41 @@ void display_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color
 void touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data);
 
 lv_obj_t *lvClockLabel = NULL;
+lv_obj_t *lvClockLabelback = NULL;
+
+lv_obj_t *lvClockLabelScreensaver = NULL;
+lv_obj_t *lvClockLabelbackScreensaver = NULL;
+
 lv_obj_t *nightmodeButton = NULL;
 lv_obj_t *tvButton = NULL;
+lv_obj_t *tvimg;
+lv_obj_t *daynightimg;
+lv_obj_t *mainscreen;
+lv_obj_t *screensaverscreen;
 
 void lv_clockTimer(lv_timer_t *timer) {
     char clocktext[20];
     sprintf(clocktext, "%02d:%02d", nightclockTZ.hour(), nightclockTZ.minute());
     lv_label_set_text(lvClockLabel, clocktext);
+    lv_label_set_text(lvClockLabelScreensaver, clocktext);
+}
+
+LV_IMG_DECLARE(day_40);
+LV_IMG_DECLARE(night_40);
+LV_IMG_DECLARE(airwick_40);
+LV_IMG_DECLARE(btn_tv_on_40);
+LV_IMG_DECLARE(btn_tv_off_40);
+LV_FONT_DECLARE(dseg7_bold_italic_196);
+LV_FONT_DECLARE(dseg7_bold_italic_96);
+
+bool bScreenSaverisActive = false;
+
+void setScreensaverActive(bool bActive) {
+    bScreenSaverisActive = bActive;
+    if (bScreenSaverisActive)
+        lv_scr_load(screensaverscreen);
+    else
+        lv_scr_load(mainscreen);
 }
 
 void ui_task(void *param) {
@@ -69,20 +97,53 @@ void ui_task(void *param) {
 
     xEventGroupSetBits(task_event, TASK_UI_READY);
 
-    lv_obj_t *mainscreen = lv_obj_create(nullptr);
+    mainscreen = lv_obj_create(nullptr);
+    screensaverscreen = lv_obj_create(nullptr);
+    lv_obj_set_style_bg_color(mainscreen, lv_color_hex(0x000000),0);
+    lv_obj_set_style_bg_color(screensaverscreen, lv_color_hex(0x000000),0);
+    
+    lvClockLabelback = lv_label_create(mainscreen);
     lvClockLabel = lv_label_create(mainscreen);
+
     lv_obj_set_pos(lvClockLabel, 20, 20);
+    lv_obj_set_style_text_font(lvClockLabel, &dseg7_bold_italic_96, 0);
+    lv_label_set_text(lvClockLabel, "88:88");
+    lv_obj_set_pos(lvClockLabelback, 20, 20);
+    lv_obj_set_style_text_font(lvClockLabelback, &dseg7_bold_italic_96, 0);
+    lv_obj_set_style_text_color(lvClockLabelback, lv_color_hex(0x101010),0);
+    lv_label_set_text(lvClockLabelback, "88:88");
+
+    lvClockLabelbackScreensaver = lv_label_create(screensaverscreen);
+    lvClockLabelScreensaver = lv_label_create(screensaverscreen);
+    lv_obj_set_style_text_font(lvClockLabelScreensaver, &dseg7_bold_italic_196, 0);
+    lv_label_set_text(lvClockLabelScreensaver, "88:88");
+    lv_obj_set_style_text_font(lvClockLabelbackScreensaver, &dseg7_bold_italic_196, 0);
+    lv_obj_set_style_text_color(lvClockLabelbackScreensaver, lv_color_hex(0x060606),0);
+    lv_obj_set_style_text_color(lvClockLabelScreensaver, lv_color_hex(0xcecece),0);
+
+    lv_label_set_text(lvClockLabelback, "88:88");
+    lv_obj_center(lvClockLabelScreensaver);
+    lv_obj_center(lvClockLabelbackScreensaver);
+
+
+
+
 
     nightmodeButton = lv_btn_create(mainscreen);
     lv_obj_set_pos(nightmodeButton, screenWidth-20-64,20);
     lv_obj_set_size(nightmodeButton, 64, 64);
     lv_obj_add_flag(nightmodeButton, LV_OBJ_FLAG_CHECKABLE);
-    lv_obj_set_style_border_color(nightmodeButton, lv_color_hex(0xffffff), 0);
-    lv_obj_set_style_bg_color(nightmodeButton, lv_color_hex(0xffffff), 0);
-    lv_obj_set_style_border_color(nightmodeButton, lv_color_hex(0xff0000), LV_STATE_CHECKED);
-    lv_obj_set_style_bg_color(nightmodeButton, lv_color_hex(0xff0000), LV_STATE_CHECKED);
-    lv_obj_set_style_border_color(nightmodeButton, lv_color_hex(0x0000ff), LV_STATE_PRESSED);
-    lv_obj_set_style_bg_color(nightmodeButton, lv_color_hex(0x0000ff), LV_STATE_PRESSED);
+    lv_obj_set_style_bg_opa(nightmodeButton, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_bg_opa(nightmodeButton, LV_OPA_TRANSP, LV_STATE_CHECKED);
+    daynightimg = lv_img_create(nightmodeButton);
+    lv_img_set_src(daynightimg, &day_40);
+    lv_obj_center(daynightimg);
+//    lv_obj_set_style_border_color(nightmodeButton, lv_color_hex(0xffffff), 0);
+//    lv_obj_set_style_bg_color(nightmodeButton, lv_color_hex(0xffffff), 0);
+//    lv_obj_set_style_border_color(nightmodeButton, lv_color_hex(0xff0000), LV_STATE_CHECKED);
+//    lv_obj_set_style_bg_color(nightmodeButton, lv_color_hex(0xff0000), LV_STATE_CHECKED);
+//    lv_obj_set_style_border_color(nightmodeButton, lv_color_hex(0x0000ff), LV_STATE_PRESSED);
+//    lv_obj_set_style_bg_color(nightmodeButton, lv_color_hex(0x0000ff), LV_STATE_PRESSED);
     lv_obj_add_event_cb(
         nightmodeButton,
         [](lv_event_t *event) {
@@ -91,8 +152,14 @@ void ui_task(void *param) {
         lv_obj_t *obj = lv_event_get_target(event);
         if (lv_obj_get_state(obj) & LV_STATE_CHECKED) {
             nightmodeActive(true);
+            lv_img_set_src(daynightimg, &night_40);
+            if (!bScreenSaverisActive)
+                setScreensaverActive(true);
         } else {
             nightmodeActive(false);
+            lv_img_set_src(daynightimg, &day_40);
+            if (bScreenSaverisActive)
+                setScreensaverActive(false);
         }
       },
       LV_EVENT_VALUE_CHANGED, nightmodeButton);
@@ -101,12 +168,18 @@ void ui_task(void *param) {
     lv_obj_set_pos(tvButton, screenWidth-20-64, 92);
     lv_obj_set_size(tvButton, 64, 64);
     lv_obj_add_flag(tvButton, LV_OBJ_FLAG_CHECKABLE);
-    lv_obj_set_style_border_color(tvButton, lv_color_hex(0xffffff), 0);
+/*    lv_obj_set_style_border_color(tvButton, lv_color_hex(0xffffff), 0);
     lv_obj_set_style_bg_color(tvButton, lv_color_hex(0xffffff), 0);
     lv_obj_set_style_border_color(tvButton, lv_color_hex(0xff0000), LV_STATE_CHECKED);
     lv_obj_set_style_bg_color(tvButton, lv_color_hex(0xff0000), LV_STATE_CHECKED);
     lv_obj_set_style_border_color(tvButton, lv_color_hex(0x0000ff), LV_STATE_PRESSED);
-    lv_obj_set_style_bg_color(tvButton, lv_color_hex(0x0000ff), LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(tvButton, lv_color_hex(0x0000ff), LV_STATE_PRESSED);*/
+    lv_obj_set_style_bg_opa(tvButton, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_bg_opa(tvButton, LV_OPA_TRANSP, LV_STATE_CHECKED);
+
+    tvimg = lv_img_create(tvButton);
+    lv_img_set_src(tvimg, &btn_tv_off_40);
+    lv_obj_center(tvimg);
     lv_obj_add_event_cb(
         tvButton,
         [](lv_event_t *event) {
@@ -115,8 +188,10 @@ void ui_task(void *param) {
         lv_obj_t *obj = lv_event_get_target(event);
         if (lv_obj_get_state(obj) & LV_STATE_CHECKED) {
             tVBedroomSwitchedOn(true);
+            lv_img_set_src(tvimg, &btn_tv_on_40);
         } else {
             tVBedroomSwitchedOn(false);
+            lv_img_set_src(tvimg, &btn_tv_off_40);
         }
       },
       LV_EVENT_VALUE_CHANGED, tvButton);
@@ -124,10 +199,14 @@ void ui_task(void *param) {
     lv_obj_t *spraybutton = lv_btn_create(mainscreen);
     lv_obj_set_pos(spraybutton, screenWidth-20-64, 92+72);
     lv_obj_set_size(spraybutton, 64, 64);
+    lv_obj_t *img = lv_img_create(spraybutton);
+    lv_img_set_src(img, &airwick_40);
+    lv_obj_center(img);
     lv_obj_set_style_border_color(spraybutton, lv_color_hex(0xffffff), 0);
     lv_obj_set_style_bg_color(spraybutton, lv_color_hex(0xffffff), 0);
     lv_obj_set_style_border_color(spraybutton, lv_color_hex(0x0000ff), LV_STATE_PRESSED);
     lv_obj_set_style_bg_color(spraybutton, lv_color_hex(0x0000ff), LV_STATE_PRESSED);
+    lv_obj_set_style_bg_opa(spraybutton, LV_OPA_TRANSP, 0);
     lv_obj_add_event_cb(
         spraybutton,
         [](lv_event_t *event) {
@@ -146,23 +225,57 @@ void ui_task(void *param) {
         if (nightmodeActive()) {
             if ((lv_obj_get_state(nightmodeButton) & LV_STATE_CHECKED) != LV_STATE_CHECKED) {
                 lv_obj_add_state(nightmodeButton, LV_STATE_CHECKED);
+                lv_img_set_src(daynightimg, &night_40);
+//                if (!bScreenSaverisActive)
+//                    setScreensaverActive(true);
             }
-            lcd.setBrightness(5);
+            if(bScreenSaverisActive)
+                lcd.setBrightness(2);
+            else
+                lcd.setBrightness(10);
         } else {
             if (lv_obj_get_state(nightmodeButton) & LV_STATE_CHECKED) {
                 lv_obj_clear_state(nightmodeButton, LV_STATE_CHECKED);
+                lv_img_set_src(daynightimg, &day_40);
+                if (bScreenSaverisActive) {
+                    lv_disp_trig_activity(NULL);
+//                    setScreensaverActive(false);
+                }
             }
-            lcd.setBrightness(100);
+            if (bScreenSaverisActive)
+                lcd.setBrightness(10);
+            else
+                lcd.setBrightness(100);
         }
         if (tVBedroomSwitchedOn()) {
             if ((lv_obj_get_state(tvButton) & LV_STATE_CHECKED) != LV_STATE_CHECKED) {
                 lv_obj_add_state(tvButton, LV_STATE_CHECKED);
+                lv_img_set_src(tvimg, &btn_tv_on_40);
             }
         } else {
             if (lv_obj_get_state(tvButton) & LV_STATE_CHECKED) {
                 lv_obj_clear_state(tvButton, LV_STATE_CHECKED);
+                lv_img_set_src(tvimg, &btn_tv_off_40);
             }
         }
+        if (!bScreenSaverisActive) {
+            if (nightmodeActive()) {
+                if (lv_disp_get_inactive_time(nullptr) > (10*1000))
+                    setScreensaverActive(true);
+            } else {
+                if (lv_disp_get_inactive_time(nullptr) > (60*1000))
+                    setScreensaverActive(true);
+            }
+        } else {
+            if (nightmodeActive()) {
+                if (lv_disp_get_inactive_time(nullptr) <= (10*1000))
+                    setScreensaverActive(false);
+            } else {
+                if (lv_disp_get_inactive_time(nullptr) <= (60*1000))
+                    setScreensaverActive(false);
+            }
+        }
+
     }
 
     vTaskDelete(NULL);

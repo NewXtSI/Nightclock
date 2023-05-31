@@ -33,7 +33,7 @@ void iobroker_task(void *param) {
             refreshDataFromIOBroker();
             delay(1000);
         } else {
-            delay(2000);
+            delay(100);
         }
     }
 }
